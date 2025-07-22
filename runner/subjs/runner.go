@@ -302,10 +302,10 @@ func (s *SubJS) ProcessWebpackFile(webpackURL string, content string, results ch
 		}
 	}
 
-	if strings.Contains(webpackURL, "buildManifest") {
+	if strings.Contains(webpackURL, "_buildManifest") {
 		paths := jsPathRe.FindAllString(content, -1)
 		for _, path := range paths {
-			resolvedURL := resolveScriptURL(baseURL, path)
+			resolvedURL := resolveScriptURL(baseURL, "_next/"+path)
 			if !processedPaths[resolvedURL] {
 				results <- resolvedURL
 				processedPaths[resolvedURL] = true
