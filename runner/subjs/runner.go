@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -106,7 +106,7 @@ func (s *SubJS) fetch(urls <-chan string, results chan string) {
 		}
 
 		// Read the complete response
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			continue
@@ -150,7 +150,7 @@ func (s *SubJS) fetch(urls <-chan string, results chan string) {
 							return
 						}
 
-						webpackBody, err := ioutil.ReadAll(webpackResp.Body)
+						webpackBody, err := io.ReadAll(webpackResp.Body)
 						webpackResp.Body.Close()
 						if err != nil {
 							return
@@ -195,6 +195,8 @@ func (s *SubJS) fetch(urls <-chan string, results chan string) {
 		})
 	}
 }
+
+var jsPathRe = regexp.MustCompile(`([A-Za-z0-9_\-./]+\.js)\b`)
 
 // ProcessWebpackFile extracts all JavaScript chunk paths from a webpack bundle
 func (s *SubJS) ProcessWebpackFile(webpackURL string, content string, results chan string) {
@@ -293,6 +295,17 @@ func (s *SubJS) ProcessWebpackFile(webpackURL string, content string, results ch
 			chunkPath := ensureNextPrefix(match[2])
 			resolvedURL := resolveScriptURL(baseURL, chunkPath)
 
+			if !processedPaths[resolvedURL] {
+				results <- resolvedURL
+				processedPaths[resolvedURL] = true
+			}
+		}
+	}
+
+	if strings.Contains(webpackURL, "buildManifest") {
+		paths := jsPathRe.FindAllString(content, -1)
+		for _, path := range paths {
+			resolvedURL := resolveScriptURL(baseURL, path)
 			if !processedPaths[resolvedURL] {
 				results <- resolvedURL
 				processedPaths[resolvedURL] = true
